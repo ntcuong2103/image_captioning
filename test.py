@@ -2,7 +2,7 @@ from data import get_tokenizer, DataGenerator
 from tensorflow.keras.callbacks import ModelCheckpoint, CSVLogger, EarlyStopping
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 import numpy as np
-from model import define_model
+from model import Concat_LSTM_GloVe
 from nltk.translate.bleu_score import corpus_bleu, sentence_bleu
 from tqdm import tqdm
 
@@ -60,9 +60,10 @@ if __name__ == '__main__':
     tokenizer = get_tokenizer(desc_list)
     max_length = max(map(len, desc_list)) + 1
     # padding for sequence: <pad> -> 0
-
-    model = define_model(len(tokenizer.word_index) + 1, 512, max_length, 0.5)
-    model.load_weights('models/model256_LSTM_inject/weights.19-0.43.hdf5')
+    import pickle
+    embedding_matrix = pickle.load(open('embedding.pkl', 'rb'))
+    model = Concat_LSTM_GloVe(len(tokenizer.word_index) + 1, 300, max_length, embedding_matrix, 0.5)
+    model.load_weights('models/modelGlove_LSTM256_inject/weights.23-0.41.hdf5')
     batch_size = 1
 
     # generator_test = DataGenerator(test_ids, annotations, len(tokenizer.word_index) + 1, tokenizer, max_length, batch_size=batch_size, shuffle=False)
@@ -70,7 +71,7 @@ if __name__ == '__main__':
     # [X, y_in], y_out = generator_test.__getitem__(0)
     # desc = generate_desc(model, tokenizer, np.array([X[0]]), 200)
     import pickle
-    # evaluate_model(model, test_ids, annotations, pickle.load(open('img_features.pkl', 'rb')), tokenizer, 200)
+    evaluate_model(model, test_ids, annotations, pickle.load(open('img_features.pkl', 'rb')), tokenizer, 200)
     
-    evaluate_model(model, ['3544673666_ffc7483c96.jpg'], annotations, pickle.load(open('img_features.pkl', 'rb')), tokenizer, 200)
+    # evaluate_model(model, ['3544673666_ffc7483c96.jpg'], annotations, pickle.load(open('img_features.pkl', 'rb')), tokenizer, 200)
     pass

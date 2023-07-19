@@ -1,7 +1,7 @@
 from data import get_tokenizer, DataGenerator
-from model import define_model
+from model import Concat_LSTM_GloVe
 from tensorflow.keras.callbacks import ModelCheckpoint, CSVLogger, EarlyStopping
-
+from embedding import get_embedding
 import tensorflow as tf
 config = tf.compat.v1.ConfigProto() 
 config.gpu_options.allow_growth = True
@@ -23,22 +23,29 @@ if __name__ == '__main__':
     # padding for sequence: <pad> -> 0
     data_gen = DataGenerator(train_ids, annotations, len(tokenizer.word_index) + 1, tokenizer, max_length, batch_size=5)
 
-    model = define_model(len(tokenizer.word_index) + 1, 512, max_length, 0.5)
-    model.load_weights('models/model256_LSTM_inject/weights.19-0.43.hdf5')
+    # embedding_matrix = get_embedding(tokenizer)
+    import pickle
+    embedding_matrix = pickle.load(open('embedding.pkl', 'rb'))
+    model = Concat_LSTM_GloVe(vocab_size=len(tokenizer.word_index) + 1,
+                              embedding_dim=300,
+                              embedding_matrix= embedding_matrix,
+                              max_length=max_length, 
+                              dropout=0.5)
+    # model.load_weights('models/model256_LSTM_inject/weights.80-0.52.hdf5')
 
-    path = 'models/model256_LSTM_inject'
+    path = 'models/modelGlove_LSTM256_inject'
     import os 
     os.makedirs(path, exist_ok=True)
-    batch_size = 5
+    batch_size = 20
 
-    checkpoint = ModelCheckpoint(path + "/weights.{epoch:02d}-{val_masked_accuracy:.2f}.hdf5", monitor='val_masked_accuracy', verbose=1, save_best_only=False, save_weights_only=True, mode='auto')
+    checkpoint = ModelCheckpoint(path + "/weights.{epoch:02d}-{val_accuracy:.2f}.hdf5", monitor='val_accuracy', verbose=1, save_best_only=True, save_weights_only=True, mode='auto')
     csvlog = CSVLogger(path+'_train_log.csv',append=True)
-    early_stopping = EarlyStopping(monitor='val_masked_accuracy', min_delta=0, patience=5)
+    early_stopping = EarlyStopping(monitor='val_accuracy', min_delta=0, patience=5)
 
     generator_train = DataGenerator(train_ids, annotations, len(tokenizer.word_index) + 1, tokenizer, max_length, batch_size=batch_size)
-    generator_val = DataGenerator(train_ids, annotations, len(tokenizer.word_index) + 1, tokenizer, max_length, batch_size=batch_size)
+    generator_val = DataGenerator(val_ids, annotations, len(tokenizer.word_index) + 1, tokenizer, max_length, batch_size=batch_size, shuffle=False)
 
     model.fit(generator_train, steps_per_epoch=len(generator_train),
             validation_data=generator_val, validation_steps=len(generator_val),
-            epochs = 30, verbose = 1, initial_epoch = 19,
+            epochs = 50, verbose = 1, initial_epoch = 0,
             callbacks = [checkpoint, csvlog, early_stopping])

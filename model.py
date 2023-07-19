@@ -49,7 +49,7 @@ def masked_accuracy(y_true, y_pred):
     accuracy = tf.reduce_sum(tf.cast(tf.argmax(y_true, -1) == tf.argmax(y_pred, -1), dtype=tf.float32) * mask, -1) / tf.reduce_sum(mask, -1)
     return tf.reduce_mean(accuracy)
 
-def define_model(vocab_size, embedding_dim, max_length, dropout):
+def Concat_LSTM(vocab_size, embedding_dim, max_length, dropout):
     # feature extractor model
     inputs1 = Input(shape=(1536,))
     fe1 = Dropout(dropout)(inputs1)
@@ -58,7 +58,7 @@ def define_model(vocab_size, embedding_dim, max_length, dropout):
     
     # sequence model
     inputs2 = Input(shape=(max_length,))
-    se1 = Embedding(vocab_size, embedding_dim, input_length=max_length, trainable=True)(inputs2)
+    se1 = Embedding(vocab_size, embedding_dim, input_length=max_length, mask_zero=True, trainable=True)(inputs2)
 
     se2 = concatenate([fe3, se1])
     se3 = Dropout(dropout)(se2)
@@ -70,34 +70,40 @@ def define_model(vocab_size, embedding_dim, max_length, dropout):
     
     # tie it together [image, seq] [word]
     model = Model(inputs=[inputs1, inputs2], outputs=outputs)
-    model.compile(loss=[masked_categorical_crossentropy], optimizer='adam', metrics=[masked_accuracy])
-    # model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+    # model.compile(loss=[masked_categorical_crossentropy], optimizer='adam', metrics=[masked_accuracy])
+    model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
     # summarize model
     print(model.summary())
      
     return model
 
-def word_for_id(integer, tokenizer):
-    for word, index in tokenizer.word_index.items():
-        if index == integer:
-            return word
-    return None
+def Concat_LSTM_GloVe(vocab_size, embedding_dim, max_length, embedding_matrix, dropout):
+    # feature extractor model
+    inputs1 = Input(shape=(1536,))
+    fe1 = Dropout(dropout)(inputs1)
+    fe2 = Dense(512, activation='relu')(fe1)
+    fe3 = RepeatVector(max_length)(fe2)
+    
+    # sequence model
+    inputs2 = Input(shape=(max_length,))
+    se1 = Embedding(vocab_size, embedding_dim, input_length=max_length, weights=[embedding_matrix], mask_zero=True, trainable=True)(inputs2)
 
-def generate_desc(model, tokenizer, photo, max_length):
-    in_text = 'start'
-    for i in range(max_length):
-        sequence = tokenizer.texts_to_sequences([in_text])[0]
-        sequence = pad_sequences([sequence], maxlen=max_length)
-        pred = model.predict([photo,sequence], verbose=0)
-        pred = np.argmax(pred)
-        word = word_for_id(pred, tokenizer)
-        if word is None:
-            break
-        in_text += ' ' + word
-        if word == 'end':
-            break
-    return in_text
-
+    se2 = concatenate([fe3, se1])
+    se3 = Dropout(dropout)(se2)
+    se4 = LSTM(512, return_sequences=True) (se3)
+    
+    # decoder model
+    decoder1 = Dense(512, activation='relu')(se4)
+    outputs = Dense(vocab_size, activation='softmax')(decoder1)
+    
+    # tie it together [image, seq] [word]
+    model = Model(inputs=[inputs1, inputs2], outputs=outputs)
+    # model.compile(loss=[masked_categorical_crossentropy], optimizer='adam', metrics=[masked_accuracy])
+    model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+    # summarize model
+    print(model.summary())
+     
+    return model
 if __name__ == "__main__":
     # import numpy as np
     # vocab_size = 10000
