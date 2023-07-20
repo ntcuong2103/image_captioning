@@ -1,5 +1,5 @@
 from data import get_tokenizer, DataGenerator
-from model import Concat_LSTM_GloVe
+from model import Concat_LSTM_GloVe, Concat_LSTM, Add_LSTM, Attention_LSTM
 from tensorflow.keras.callbacks import ModelCheckpoint, CSVLogger, EarlyStopping
 from embedding import get_embedding
 import tensorflow as tf
@@ -25,18 +25,17 @@ if __name__ == '__main__':
 
     # embedding_matrix = get_embedding(tokenizer)
     import pickle
-    embedding_matrix = pickle.load(open('embedding.pkl', 'rb'))
-    model = Concat_LSTM_GloVe(vocab_size=len(tokenizer.word_index) + 1,
+    # embedding_matrix = pickle.load(open('embedding.pkl', 'rb'))
+    model = Attention_LSTM(vocab_size=len(tokenizer.word_index) + 1,
                               embedding_dim=300,
-                              embedding_matrix= embedding_matrix,
                               max_length=max_length, 
                               dropout=0.5)
     # model.load_weights('models/model256_LSTM_inject/weights.80-0.52.hdf5')
 
-    path = 'models/modelGlove_LSTM256_inject'
+    path = 'models/attention_LSTM'
     import os 
     os.makedirs(path, exist_ok=True)
-    batch_size = 20
+    batch_size = 1
 
     checkpoint = ModelCheckpoint(path + "/weights.{epoch:02d}-{val_accuracy:.2f}.hdf5", monitor='val_accuracy', verbose=1, save_best_only=True, save_weights_only=True, mode='auto')
     csvlog = CSVLogger(path+'_train_log.csv',append=True)

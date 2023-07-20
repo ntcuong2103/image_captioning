@@ -19,7 +19,7 @@ class DataGenerator(Sequence):
     'Generates data for Keras'
     def __init__(self, list_IDs, labels, n_classes, tokenizer, max_length, batch_size=1, shuffle=True):
         'Initialization'
-        self.img_features = pickle.load(open('img_features.pkl', 'rb'))
+        self.img_features = pickle.load(open('models/attention_LSTM/img_features_2d.pkl', 'rb'))
         self.batch_size = batch_size
         self.labels = labels
         self.list_IDs = list_IDs

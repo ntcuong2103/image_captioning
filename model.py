@@ -1,7 +1,7 @@
 import tensorflow as tf
 import numpy as np
 from tensorflow.keras.models import Model, load_model
-from tensorflow.keras.layers import Input, Dense, LSTM, GRU, Embedding, Dropout, RepeatVector, add, concatenate
+from tensorflow.keras.layers import Input, Dense, LSTM, GRU, Embedding, Dropout, RepeatVector, add, concatenate, Reshape
 from tensorflow.keras.utils import plot_model
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 
@@ -22,6 +22,7 @@ def extract_features(directory):
       and width and height should be no smaller than 75.
     '''
     model = InceptionResNetV2(include_top = False, weights='imagenet', pooling='avg')
+    model = Model(inputs=model.input, outputs=model.get_layer('conv_7b').output)
     features = {}
     for img in tqdm(os.listdir(directory)):
         filename = directory + "/" + img
@@ -104,6 +105,59 @@ def Concat_LSTM_GloVe(vocab_size, embedding_dim, max_length, embedding_matrix, d
     print(model.summary())
      
     return model
+
+def Add_LSTM(vocab_size, embedding_dim, max_length, dropout):
+    # features from the CNN model squeezed from 2048 to 256 nodes
+    inputs1 = Input(shape=(1536,))
+    fe1 = Dropout(dropout) (inputs1)
+    fe2 = Dense(512, activation = 'relu') (fe1)
+    
+    # GRU sequence model
+    inputs2 = Input(shape=(max_length,))
+    se1 = Embedding(vocab_size, embedding_dim, mask_zero = True) (inputs2)
+    se2 = Dropout(dropout) (se1)
+    se3 = LSTM(512, return_sequences=True) (se2)
+    
+    # Merging both models
+    decoder1 = concatenate([fe2, se3])
+    decoder2 = Dropout(dropout) (decoder1)
+    decoder3 = Dense(512, activation = 'relu') (decoder2)
+    outputs = Dense(vocab_size, activation = 'softmax') (decoder3)
+    
+    # tie it together [image, seq] [word]
+    model = Model(inputs = [inputs1, inputs2], outputs = outputs)
+    model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+        
+    return model
+
+def Attention_LSTM(vocab_size, embedding_dim, max_length, dropout):
+    # features from the CNN model squeezed from 2048 to 256 nodes
+    inputs1 = Input(shape=(None, None, 1536,))
+    feat_seq = Reshape((-1, 1536))(inputs1)
+    fe1 = Dropout(dropout) (feat_seq)
+    fe2 = Dense(512, activation = 'relu') (fe1)
+    
+    inputs2 = Input(shape=(max_length,))
+    se1 = Embedding(vocab_size, embedding_dim, mask_zero = True) (inputs2)
+    se2 = Dropout(dropout) (se1)
+    se3 = LSTM(512, return_sequences=True) (se2)
+
+    attention_context = tf.keras.layers.AdditiveAttention()(
+        [se3, fe2])
+
+    
+    # Merging both models
+    decoder1 = concatenate([attention_context, se3])
+    decoder2 = Dropout(dropout) (decoder1)
+    decoder3 = Dense(512, activation = 'relu') (decoder2)
+    outputs = Dense(vocab_size, activation = 'softmax') (decoder3)
+    
+    # tie it together [image, seq] [word]
+    model = Model(inputs = [inputs1, inputs2], outputs = outputs)
+    model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+        
+    return model
+
 if __name__ == "__main__":
     # import numpy as np
     # vocab_size = 10000
@@ -115,10 +169,11 @@ if __name__ == "__main__":
 
     # features = extract_features('Images')
     # import pickle
-    # pickle.dump(features, open('img_features.pkl', 'wb'))
+    # pickle.dump(features, open('img_features_2d.pkl', 'wb'))
     # exit()
 
-
+    model = Attention_LSTM(1000, 300, 200, 0.5)
+    model.summary()
     # model = load_model('saved_models/model256_GRU_inject_dropout0.25.h5')
     # # load and prepare the photograph
     # # image = "C:\\Users\\HDH\\Desktop\\python-img-cap-gen\\Flicker8k_Dataset\\3484649669_7bfe62080b.jpg"
