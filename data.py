@@ -6,13 +6,14 @@ from tensorflow.keras.preprocessing.sequence import pad_sequences
 from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.utils import Sequence, to_categorical
 
+MIN_WORD_COUNT = 5
 
 def get_tokenizer(desc_list):
     tokenizer = Tokenizer(
         filters='!"#$%&()*+,-./:;=?@[\\]^_`{|}~\t\n', oov_token="<unk>"
     )
     tokenizer.fit_on_texts(desc_list)
-    filtered_vocab = [w for w, c in tokenizer.word_counts.items() if c >= 5]
+    filtered_vocab = [w for w, c in tokenizer.word_counts.items() if c >= MIN_WORD_COUNT]
     tokenizer.word_index = {
         w: id
         for w, id in tokenizer.word_index.items()

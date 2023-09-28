@@ -41,8 +41,9 @@ def extract_features(directory, model):
     return features
 
 if __name__ == "__main__":
+    image_path = "Images"
     model = InceptionResNetV2Encoder(pooling='avg')
-    features = extract_features('Images', model)
+    features = extract_features(image_path, model)
     import pickle
     pickle.dump(features, open('models/encoded_features/inception_resnet_v2_avg.pkl', 'wb'))
     exit()
