@@ -37,7 +37,7 @@ class DataGenerator(Sequence):
         shuffle=True,
     ):
         "Initialization"
-        self.img_features = pickle.load(open("img_features.pkl", "rb"))
+        self.img_features = pickle.load(open("models/encoded_features/inception_resnet_v2.pkl", "rb"))
         self.batch_size = batch_size
         self.labels = labels
         self.list_IDs = list_IDs
@@ -98,35 +98,3 @@ class DataGenerator(Sequence):
             ),
             num_classes=self.n_classes,
         )
-
-
-def main():
-    train_ids = [
-        line.strip()
-        for line in open("Flickr8k_text/Flickr_8k.trainImages.txt").readlines()
-    ]
-    from collections import defaultdict
-    from itertools import chain
-
-    annotations = defaultdict(list)
-    for line in open("Flickr8k_text/Flickr8k.token.txt").readlines():
-        if len(line.strip().split("\t")) == 2:
-            annotations[line.strip().split("\t")[0][:-2]].append(
-                line.strip().split("\t")[1]
-            )
-
-    desc_list = list(chain(*[annotations[id] for id in train_ids]))
-    tokenizer = get_tokenizer(desc_list)
-    max_length = max(map(len, desc_list)) + 1
-    # padding for sequence: <pad> -> 0
-    data_gen = DataGenerator(
-        train_ids,
-        annotations,
-        len(tokenizer.word_index) + 1,
-        tokenizer,
-        max_length,
-        batch_size=5,
-    )
-
-
-# main()

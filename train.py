@@ -1,4 +1,6 @@
 import tensorflow as tf
+import pickle
+
 from tensorflow.keras.callbacks import (
     CSVLogger,
     EarlyStopping,
@@ -6,7 +8,7 @@ from tensorflow.keras.callbacks import (
 )
 
 from data import DataGenerator, get_tokenizer
-from model import Merge_LSTM
+from model import Injection_LSTM, Merge_LSTM, Attention_LSTM
 
 config = tf.compat.v1.ConfigProto()
 config.gpu_options.allow_growth = True
@@ -44,24 +46,23 @@ if __name__ == "__main__":
         batch_size=5,
     )
 
-    # embedding_matrix = get_embedding(tokenizer)
-
-    # embedding_matrix = pickle.load(open('embedding.pkl', 'rb'))
-    model = Merge_LSTM(
-        512,
+    embedding_matrix = pickle.load(open('embedding_w2v.pkl', 'rb'))
+    model = Attention_LSTM(
+        1536,
+        128,
         vocab_size=len(tokenizer.word_index) + 1,
         embedding_dim=300,
-        embedding_matrix=None,
+        embedding_matrix=embedding_matrix,
         max_length=max_length,
         dropout=0.5,
     )
-    # model.load_weights('models/model256_LSTM_inject/weights.80-0.52.hdf5')
+    # model.load_weights('models/attention_inception_GloVe_128/weights.09-0.36.hdf5')
 
-    path = "models/model256_LSTM_merge"
+    path = "models/attention_inception_w2v_128"
     import os
 
     os.makedirs(path, exist_ok=True)
-    batch_size = 50
+    batch_size = 1
 
     checkpoint = ModelCheckpoint(
         path + "/weights.{epoch:02d}-{val_accuracy:.2f}.hdf5",
@@ -73,7 +74,7 @@ if __name__ == "__main__":
     )
     csvlog = CSVLogger(path + "_train_log.csv", append=True)
     early_stopping = EarlyStopping(
-        monitor="val_accuracy", min_delta=0, patience=5
+        monitor="val_accuracy", min_delta=0, patience=10
     )
 
     generator_train = DataGenerator(
@@ -99,7 +100,7 @@ if __name__ == "__main__":
         steps_per_epoch=len(generator_train),
         validation_data=generator_val,
         validation_steps=len(generator_val),
-        epochs=50,
+        epochs=100,
         verbose=1,
         initial_epoch=0,
         callbacks=[checkpoint, csvlog, early_stopping],

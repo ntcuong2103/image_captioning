@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 from beamsearch import generate_sequence_beamsearch
 from data import get_tokenizer
-from model import Merge_LSTM
+from model import Merge_LSTM, Attention_LSTM, Injection_LSTM
 
 config = tf.compat.v1.ConfigProto()
 # Don't pre-allocate memory; allocate as-needed
@@ -105,10 +105,18 @@ if __name__ == "__main__":
     import pickle
 
     embedding_matrix = pickle.load(open("embedding.pkl", "rb"))
-    model = Merge_LSTM(
-        512, len(tokenizer.word_index) + 1, 300, None, max_length, 0.5
+
+    model = Injection_LSTM(
+        1536,
+        128,
+        vocab_size=len(tokenizer.word_index) + 1,
+        embedding_dim=300,
+        embedding_matrix=embedding_matrix,
+        max_length=max_length,
+        dropout=0.5,
     )
-    model.load_weights("models/model256_LSTM_merge/weights.27-0.40.hdf5")
+
+    model.load_weights("models/injection_inception_w2v_128/weights.46-0.40.hdf5")
     batch_size = 1
 
     import pickle
@@ -117,9 +125,10 @@ if __name__ == "__main__":
         model,
         test_ids,
         annotations,
-        pickle.load(open("img_features.pkl", "rb")),
+        pickle.load(open("models/encoded_features/inception_resnet_v2.pkl", "rb")),
         tokenizer,
         200,
     )
 
-    # evaluate_model(model, ['3544673666_ffc7483c96.jpg'], annotations, pickle.load(open('models/attention_LSTM/img_features_2d.pkl', 'rb')), tokenizer, 200)
+    # evaluate a single image
+    # evaluate_model(model, ['3484649669_7bfe62080b.jpg', '3544673666_ffc7483c96.jpg', '2399219552_bbba0a9a59.jpg', '3514184232_b336414040.jpg'], annotations, pickle.load(open('models/encoded_features/inception_resnet_v2_avg.pkl', 'rb')), tokenizer, 200)
